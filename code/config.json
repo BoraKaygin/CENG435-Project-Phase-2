@@ -1,18 +1,19 @@
 {
-  "covert_channel_code": "Replace it with the [Code] of chosen covert channel type seen in ODTUClass.",
+  "covert_channel_code": "CSC-PSV-TCP-URG",
   "send": {
     "parameters": {
-      "parameter1": "p1",
-      "parameter2": 1234,
-      "log_file_name": "Example_UDPTimingInterarrivalChannelSender.log"
+      "source_ip": "172.18.0.2",
+      "destination_ip": "172.18.0.3",
+      "destination_port": 8000,
+      "xor_code": "AJ8xvs5itqh4Ia wE6k7pCb iQjQKzhrT 6cJq3Pp9?Ka 3Z21u  AdBL6Xm UtItjtv NjQFEzu0 Ere08tX0Ixg aU4 6RC6 .",
+      "log_file_name": "Sender.log"
     }
   },
   "receive": {
     "parameters": {
-      "parameter1": "p1",
-      "parameter2": 1234,
-      "parameter3": "p3",
-      "log_file_name": "Example_UDPTimingInterarrivalChannelReceiver.log"
+      "filter": "tcp and host 172.18.0.2 and dst port 8000",
+      "xor_code": "AJ8xvs5itqh4Ia wE6k7pCb iQjQKzhrT 6cJq3Pp9?Ka 3Z21u  AdBL6Xm UtItjtv NjQFEzu0 Ere08tX0Ixg aU4 6RC6 .",
+      "log_file_name": "Receiver.log"
     }
   }
 }

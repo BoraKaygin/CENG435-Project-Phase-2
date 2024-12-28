@@ -6,8 +6,15 @@
 Covert Channel documentation
 ============================
 
-Please add your names, group ID, and your link to the forked public repository here by editing `index.rst` in the docs folder.
+Group Members:
+   Dilara Tülüce
+   
+   Hasan Bora Kaygın
+Group ID:
+   50
 
+Forked Repository Link:
+   https://github.com/BoraKaygin/CENG435-Project-Phase-2
 
 .. toctree::
    :maxdepth: 2
