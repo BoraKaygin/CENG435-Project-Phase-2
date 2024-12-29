@@ -1,4 +1,4 @@
-import string
+#import string
 from CovertChannelBase import CovertChannelBase
 from scapy.all import IP, TCP, sniff
 import decimal
@@ -43,13 +43,10 @@ class MyCovertChannel(CovertChannelBase):
         return '{:0{}b}'.format(value_scaled, precision["integer"] + precision["fraction"])
     
     def get_value_with_min_bits(self, min_value, max_value, precision):
-        #mid_value = (min_value + max_value) / 2
-        #return self.float_to_binary(mid_value, precision)
-        ####
         min_string = self.float_to_binary(min_value, precision)
-        #print("Min string:\n{}".format(min_string))
+        print("Min string:\n{}".format(min_string))
         max_string = self.float_to_binary(max_value, precision)
-        #print("Max string:\n{}".format(max_string))
+        print("Max string:\n{}".format(max_string))
         for i in range(sum(precision.values())):
             if max_string[i] != min_string[i]:
                 break
@@ -59,20 +56,16 @@ class MyCovertChannel(CovertChannelBase):
     def encode_message(self, message, precision):
         step_min = Decimal(0)
         step_max = Decimal(1)
-        encoded_message = ""
         for char in message:
             step_values = self.generate_next_step_values(step_min, step_max)
             #for key in step_values:
             #    print("Char: {}, Min: {}, Max: {}".format(key, step_values[key][0], step_values[key][1]))
             step_min = step_values[char][0]
             step_max = step_values[char][1]
-            encoded_message += char
-            #print("Encoded message:\n{}".format(encoded_message))
-            #print(f"Step min: {step_min:.30f}, Step max: {step_max:.30f}")
         return self.get_value_with_min_bits(step_min, step_max, precision)
 
 
-    def send(self, source_ip, destination_ip, destination_port, frequency_dict, precision, min_length, max_length, length_field, log_file_name):
+    def send(self, source_ip, destination_ip, destination_port, frequency_dict, precision, min_length, max_length, log_file_name):
         """
         - Each bit is XORed with the corresponding bit of the xor_code in line 29
         - This is done explicitly with an if statement
@@ -83,23 +76,19 @@ class MyCovertChannel(CovertChannelBase):
         message = self.generate_random_message(min_length=min_length, max_length=max_length)
         self.log_message(message, log_file_name)
         binary_message = self.convert_string_message_to_binary(message)
-        #print("Message:\n{}".format(message))
-        #print("Binary message:\n{}".format(binary_message))
-        #print("Binary message length: {}".format(len(binary_message)))
+        print("Message:\n{}".format(message))
+        print("Binary message:\n{}".format(binary_message))
+        print("Binary message length: {}".format(len(binary_message)))
 
         packet_IP = IP(src=source_ip, dst=destination_ip)
         packet_TCP = TCP(dport=destination_port)
 
         self.create_probs_table(frequency_dict)
         encoded_message = self.encode_message(message, precision)
-        #print("Encoded message:\n{}".format(encoded_message))
-        #print("Encoded message length: {}".format(len(encoded_message)))
-        length_in_binary = bin(len(encoded_message))[2:]
-        complete_to_length_field = "0" * (length_field - len(length_in_binary)) + length_in_binary
-
-        encoded_message = complete_to_length_field + encoded_message
+        print("Encoded message:\n{}".format(encoded_message))
+        print("Encoded message length: {}".format(len(encoded_message)))
         
-        start = time.time()
+        #start = time.time()
         for bit in encoded_message:
             if bit == "1":
                 packet_TCP.flags = "U"
@@ -107,9 +96,9 @@ class MyCovertChannel(CovertChannelBase):
                 packet_TCP.flags = ""
             packet = packet_IP / packet_TCP
             CovertChannelBase.send(self, packet)
-        end = time.time()
-        bps = len(binary_message) / (end - start)
-        print("Sent {} bits in {} seconds. {} bits per second.".format(len(binary_message), end - start, bps))
+        #end = time.time()
+        #bps = len(binary_message) / (end - start)
+        #print("Sent {} bits in {} seconds. {} bits per second.".format(len(binary_message), end - start, bps))
     
     def binary_to_float(self, binary_string, precision):
         #integer = int(binary_string[:precision["integer"]], 2)
@@ -118,18 +107,15 @@ class MyCovertChannel(CovertChannelBase):
         return Decimal(int(binary_string, 2)) / Decimal(2 ** (len(binary_string)-precision["integer"]))
     
     def find_char(self, value, step_values):
-        result = ""
         for key in step_values:
             if value >= step_values[key][0] and value <= step_values[key][1]:
-                #print(f"Value: {value:.30f}")
-                #print(f"Key: {key}, Min: {step_values[key][0]:.30f}, Max: {step_values[key][1]:.30f}")
                 return key
-        #print(f"Value: {value:.30f}")
-        #for key in step_values:
-        #    print(f"Char: {key}, Min: {step_values[key][0]:.30f}, Max: {step_values[key][1]:.30f}")
-        raise Exception("Value {} not found in step values".format(value))
+        print(f"Value: {value:.10f}")
+        for key in step_values:
+            print(f"Char: {key}, Min: {step_values[key][0]:.10f}, Max: {step_values[key][1]:.10f}")
+        raise("Value {} not found in step values".format(value))
 
-    def receive(self, filter, frequency_dict, precision, length_field, decoded_message_length, log_file_name):
+    def receive(self, filter, frequency_dict, precision, log_file_name):
         """
         - The packet is received and the URG flag is checked
         - If the URG flag is set, the XOR encoded bit is 1, otherwise it is 0
@@ -140,48 +126,6 @@ class MyCovertChannel(CovertChannelBase):
         """
         decimal.getcontext().prec = sum(precision.values())
 
-        message_length = ""
-
-        def read_length_field_bits(packet):
-            nonlocal message_length
-            message_length += "1" if "U" in packet[TCP].flags else "0"
-            if len(message_length) == length_field:
-                return True
-            return False
-        
-        sniff(filter=filter, stop_filter=read_length_field_bits)
-
-        message_length = int(message_length, 2)
-        encoded_message = ""
-
-        def read_message_bits(packet):
-            nonlocal encoded_message
-            encoded_message += "1" if "U" in packet[TCP].flags else "0"
-            if len(encoded_message) == message_length:
-                return True
-            return False
-        
-        sniff(filter=filter, stop_filter=read_message_bits)
-
-        value = self.binary_to_float(encoded_message, precision)
-
-        self.create_probs_table(frequency_dict)
-
-        step_min = Decimal(0)
-        step_max = Decimal(1)
-
-        decoded_message = ""
-
-        for i in range(decoded_message_length):
-            step_values = self.generate_next_step_values(step_min, step_max)
-            current_char = self.find_char(value, step_values)
-            decoded_message += current_char
-            step_min = step_values[current_char][0]
-            step_max = step_values[current_char][1]
-        
-        #print("Decoded message:\n{}".format(decoded_message))
-
-        """
         encoded_message = ""
         decoded_message = ""
 
@@ -192,8 +136,7 @@ class MyCovertChannel(CovertChannelBase):
 
         step_values = self.generate_next_step_values(step_min, step_max)
         #for key in step_values:
-        #    print(f"Char: {key}, Min: {step_values[key][0]:.30f}, Max: {step_values[key][1]:.30f}")
-
+        #    print("Char: {}, Min: {}, Max: {}".format(key, step_values[key][0], step_values[key][1]))
 
         def is_dot(packet):
             nonlocal encoded_message, decoded_message, step_min, step_max, step_values
@@ -211,12 +154,6 @@ class MyCovertChannel(CovertChannelBase):
                 variant_encoded_message = encoded_message[:-1] + "1"
             #print("Variant encoded message:\n{}".format(variant_encoded_message))
             variant_value = self.binary_to_float(variant_encoded_message, precision)
-            if variant_value > step_max or variant_value < step_min:
-                return False
-            #if variant_value > step_max:
-            #    variant_value = step_max
-            #elif variant_value < step_min:
-            #    variant_value = step_min
             #print("Variant value: {}".format(variant_value))
             variant_char = self.find_char(variant_value, step_values)
             #print("Variant char: {}".format(variant_char))
@@ -227,8 +164,8 @@ class MyCovertChannel(CovertChannelBase):
                     return True
                 step_min = step_values[current_char][0]
                 step_max = step_values[current_char][1]
-                print(f"Step min: {step_min:.30f}, Step max: {step_max:.30f}")
                 step_values = self.generate_next_step_values(step_min, step_max)
+            """
             if fetched_bit == "1":
                 lower_encoded_message = encoded_message[:-1] + "0"
                 lower_value = self.binary_to_float(lower_encoded_message, precision)
@@ -251,10 +188,11 @@ class MyCovertChannel(CovertChannelBase):
                     step_min = step_values[current_char][0]
                     step_max = step_values[current_char][1]
                     step_values = self.generate_next_step_values(step_min, step_max)
+            """
             return False
             
         sniff(filter=filter, stop_filter=is_dot)
-        """
+
         self.log_message(decoded_message, log_file_name)
 
         """
